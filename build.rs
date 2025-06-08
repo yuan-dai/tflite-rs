@@ -59,6 +59,123 @@ fn binary_changing_features() -> String {
     features
 }
 
+#[cfg(feature = "build")]
+fn build_with_cmake(tflite: &Path, tf_lib_name: &Path, arch: &str, os: &str) {
+    use std::process::Command;
+    
+    println!("Building TensorFlow Lite with CMake");
+    let start = std::time::Instant::now();
+    
+    let build_dir = tf_lib_name.parent().unwrap().join("tflite_cmake_build");
+    std::fs::create_dir_all(&build_dir).expect("Failed to create build directory");
+    
+    // Create a minimal CMakeLists.txt for TensorFlow Lite
+    let cmake_content = r#"
+cmake_minimum_required(VERSION 3.16)
+project(tensorflow-lite)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# TensorFlow Lite source directory
+set(TFLITE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+
+# Include directories
+include_directories(${TFLITE_SOURCE_DIR})
+include_directories(${TFLITE_SOURCE_DIR}/../downloads/flatbuffers/include)
+include_directories(${TFLITE_SOURCE_DIR}/../downloads/absl)
+
+# Collect TensorFlow Lite source files
+file(GLOB_RECURSE TFLITE_SRCS
+    "${TFLITE_SOURCE_DIR}/lite/*.cc"
+    "${TFLITE_SOURCE_DIR}/lite/*.c"
+)
+
+# Exclude test files and examples
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*_test\\.cc$")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/test/.*")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/examples/.*")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/benchmark/.*")
+
+# Add required dependencies
+file(GLOB_RECURSE ABSL_SRCS "${TFLITE_SOURCE_DIR}/../downloads/absl/absl/*.cc")
+list(FILTER ABSL_SRCS EXCLUDE REGEX ".*_test\\.cc$")
+list(FILTER ABSL_SRCS EXCLUDE REGEX ".*/test/.*")
+
+# Create static library
+add_library(tensorflow-lite STATIC ${TFLITE_SRCS} ${ABSL_SRCS})
+
+# Compiler definitions
+target_compile_definitions(tensorflow-lite PRIVATE
+    GEMMLOWP_ALLOW_SLOW_SCALAR_FALLBACK
+    FLATBUFFERS_POLYMORPHIC_NATIVETABLE
+)
+
+# Platform-specific settings
+if(WIN32)
+    target_compile_definitions(tensorflow-lite PRIVATE _WIN32_WINNT=0x0A00)
+endif()
+"#;
+    
+    let cmake_file = tflite.join("CMakeLists.txt");
+    std::fs::write(&cmake_file, cmake_content).expect("Failed to write CMakeLists.txt");
+    
+    // Configure with CMake
+    let mut cmake_cmd = Command::new("cmake");
+    cmake_cmd
+        .current_dir(&build_dir)
+        .arg(tflite)
+        .arg("-DCMAKE_BUILD_TYPE=Release");
+    
+    // Platform-specific CMake arguments
+    let target = env::var("TARGET").unwrap_or_default();
+    if target.contains("windows") {
+        cmake_cmd.arg("-A").arg("x64");
+    }
+    
+    println!("Running CMake configure: {:?}", cmake_cmd);
+    if !cmake_cmd.status().expect("Failed to run cmake configure").success() {
+        panic!("CMake configure failed");
+    }
+    
+    // Build with CMake
+    let mut build_cmd = Command::new("cmake");
+    build_cmd
+        .current_dir(&build_dir)
+        .arg("--build")
+        .arg(".")
+        .arg("--config")
+        .arg("Release");
+    
+    println!("Running CMake build: {:?}", build_cmd);
+    if !build_cmd.status().expect("Failed to run cmake build").success() {
+        panic!("CMake build failed");
+    }
+    
+    // Find and copy the built library
+    let lib_patterns = if target.contains("windows") {
+        vec!["Release/tensorflow-lite.lib", "tensorflow-lite.lib"]
+    } else {
+        vec!["libtensorflow-lite.a"]
+    };
+    
+    let mut found_lib = None;
+    for pattern in lib_patterns {
+        let lib_path = build_dir.join(pattern);
+        if lib_path.exists() {
+            found_lib = Some(lib_path);
+            break;
+        }
+    }
+    
+    let lib_path = found_lib.expect("Could not find built TensorFlow Lite library");
+    std::fs::copy(&lib_path, tf_lib_name).unwrap_or_else(|_| {
+        panic!("Unable to copy {} to {}", lib_path.display(), tf_lib_name.display())
+    });
+    
+    println!("CMake build took {:?}", start.elapsed());
+}
+
 fn prepare_tensorflow_library() {
     let arch = env::var("CARGO_CFG_TARGET_ARCH").expect("Unable to get TARGET_ARCH");
 
@@ -73,6 +190,13 @@ fn prepare_tensorflow_library() {
             Path::new(&out_dir).join(format!("libtensorflow-lite{binary_changing_features}.a"));
         let os = env::var("CARGO_CFG_TARGET_OS").expect("Unable to get TARGET_OS");
         if !tf_lib_name.exists() {
+            // Use CMake build instead of flaky Makefile on Windows and macOS
+            let target = env::var("TARGET").unwrap_or_default();
+            if target.contains("windows") || target.contains("darwin") {
+                build_with_cmake(&tflite, &tf_lib_name, &arch, &os);
+                return;
+            }
+            
             println!("Building tflite");
             let start = Instant::now();
             let mut make = std::process::Command::new("make");
