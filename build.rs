@@ -251,7 +251,7 @@ fn import_tflite_types() {
         .clang_arg("-DFLATBUFFERS_POLYMORPHIC_NATIVETABLE")
         .clang_arg("-x")
         .clang_arg("c++")
-        .clang_arg("-std=c++11")
+        .clang_arg("-std=c++17")
         // required to get cross compilation for aarch64 to work because of an issue in flatbuffers
         .clang_arg("-fms-extensions")
         .no_copy("_Tp");
@@ -265,18 +265,29 @@ fn import_tflite_types() {
 
 fn build_inline_cpp() {
     let submodules = submodules();
+    let target = env::var("TARGET").unwrap_or_default();
 
-    cpp_build::Config::new()
+    let mut config = cpp_build::Config::new();
+    config
         .include(submodules.join("tensorflow"))
         .include(submodules.join("downloads/flatbuffers/include"))
-        .flag("-fPIC")
-        .flag("-std=c++14")
-        .flag("-Wno-sign-compare")
         .define("GEMMLOWP_ALLOW_SLOW_SCALAR_FALLBACK", None)
         .define("FLATBUFFERS_POLYMORPHIC_NATIVETABLE", None)
         .debug(true)
-        .opt_level(if cfg!(debug_assertions) { 0 } else { 2 })
-        .build("src/lib.rs");
+        .opt_level(if cfg!(debug_assertions) { 0 } else { 2 });
+
+    // MSVC: skip GCC/ELF-specific flags
+    if target.contains("msvc") {
+        // MSVC uses different flag syntax and doesn't need -fPIC
+        config.flag("/std:c++17");
+    } else {
+        config
+            .flag("-fPIC")
+            .flag("-std=c++17")
+            .flag("-Wno-sign-compare");
+    }
+
+    config.build("src/lib.rs");
 }
 
 fn import_stl_types() {
@@ -295,7 +306,7 @@ fn import_stl_types() {
         .derive_eq(true)
         .clang_arg("-x")
         .clang_arg("c++")
-        .clang_arg("-std=c++14")
+        .clang_arg("-std=c++17")
         .clang_arg("-fms-extensions")
         .formatter(Formatter::Rustfmt)
         .generate()
