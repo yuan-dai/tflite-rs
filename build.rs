@@ -110,6 +110,9 @@ include_directories(.)
 include_directories(tensorflow)
 include_directories(lite/tools/make/downloads/flatbuffers/include)
 include_directories(lite/tools/make/downloads/absl)
+include_directories(lite/tools/make/downloads/eigen)
+include_directories(lite/tools/make/downloads/gemmlowp)
+include_directories(lite/tools/make/downloads/farmhash/src)
 
 # Collect source files - only TensorFlow Lite core, exclude components requiring TF Core
 file(GLOB_RECURSE TFLITE_SRCS 
@@ -131,6 +134,14 @@ list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/python/.*")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/java/.*")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/objc/.*")
 
+# Exclude platform-specific files (Android, iOS, Unix)
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*_android\\.cc$")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*_ios\\.cc$") 
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*_jni\\.cc$")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/nnapi/.*")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/models/.*")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*mmap_allocation\\.cc$")
+
 # Exclude benchmark files (require Google Benchmark library)
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*_benchmark\\.cc$")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/benchmark/.*")
@@ -143,8 +154,12 @@ file(GLOB_RECURSE ABSL_SRCS "lite/tools/make/downloads/absl/absl/*.cc")
 list(FILTER ABSL_SRCS EXCLUDE REGEX ".*_test\\.cc$")
 list(FILTER ABSL_SRCS EXCLUDE REGEX ".*/test/.*")
 
+# Add FarmHash dependency
+file(GLOB_RECURSE FARMHASH_SRCS "lite/tools/make/downloads/farmhash/src/*.cc")
+list(FILTER FARMHASH_SRCS EXCLUDE REGEX ".*_test\\.cc$")
+
 # Create the library
-add_library(tensorflow-lite STATIC ${TFLITE_SRCS} ${ABSL_SRCS})
+add_library(tensorflow-lite STATIC ${TFLITE_SRCS} ${ABSL_SRCS} ${FARMHASH_SRCS})
 
 # Compiler definitions
 target_compile_definitions(tensorflow-lite PRIVATE
