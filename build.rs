@@ -33,7 +33,7 @@ fn prepare_tensorflow_source() -> PathBuf {
             .expect("Unable to copy tensorflow");
     }
 
-    let download_dir = tf_src_dir.join("tensorflow/lite/tools/make/downloads");
+    let download_dir = tf_src_dir.join("lite/tools/make/downloads");
     if !download_dir.exists() {
         fs_extra::dir::copy(
             submodules.join("downloads"),
