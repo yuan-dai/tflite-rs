@@ -104,9 +104,9 @@ if(WIN32)
     add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Reduce Windows header bloat
     add_compile_options(/EHsc)               # Enable exception handling
     
-    # FarmHash GCC builtin compatibility for MSVC
-    add_compile_definitions(__builtin_expect(expr,expected)=(expr))
-    add_compile_definitions(__builtin_unreachable()=__assume(0))
+    # FarmHash GCC builtin compatibility for MSVC - use compiler flags
+    add_compile_options("/D__builtin_expect(expr,expected)=(expr)")
+    add_compile_options("/D__builtin_unreachable()=__assume(0)")
 endif()
 
 # Include directories - this is crucial for finding headers
