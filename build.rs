@@ -103,6 +103,10 @@ if(WIN32)
     add_compile_definitions(NOMINMAX)        # Prevent min/max macro conflicts
     add_compile_definitions(WIN32_LEAN_AND_MEAN)  # Reduce Windows header bloat
     add_compile_options(/EHsc)               # Enable exception handling
+    
+    # FarmHash GCC builtin compatibility for MSVC
+    add_compile_definitions(__builtin_expect(expr,expected)=(expr))
+    add_compile_definitions(__builtin_unreachable()=__assume(0))
 endif()
 
 # Include directories - this is crucial for finding headers
@@ -146,8 +150,13 @@ list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*mmap_allocation\\.cc$")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*_benchmark\\.cc$")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/benchmark/.*")
 
-# Also exclude Abseil benchmark files
+# Also exclude Abseil benchmark files and problematic mutex files  
 list(FILTER ABSL_SRCS EXCLUDE REGEX ".*_benchmark\\.cc$")
+list(FILTER ABSL_SRCS EXCLUDE REGEX ".*mutex_nonprod\\.cc$")
+list(FILTER ABSL_SRCS EXCLUDE REGEX ".*_test\\.cc$")
+
+# Also exclude FarmHash test files
+list(FILTER FARMHASH_SRCS EXCLUDE REGEX ".*test\\.cc$")
 
 # Add Abseil dependency
 file(GLOB_RECURSE ABSL_SRCS "lite/tools/make/downloads/absl/absl/*.cc")
