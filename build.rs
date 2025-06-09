@@ -21,7 +21,7 @@ fn prepare_tensorflow_source() -> PathBuf {
     println!("Moving tflite source");
     let start = Instant::now();
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let tf_src_dir = out_dir.join("tensorflow/tensorflow");
+    let tf_src_dir = out_dir.join("tensorflow");
     let submodules = submodules();
 
     let mut copy_dir = fs_extra::dir::CopyOptions::new();
@@ -33,7 +33,7 @@ fn prepare_tensorflow_source() -> PathBuf {
             .expect("Unable to copy tensorflow");
     }
 
-    let download_dir = tf_src_dir.join("lite/tools/make/downloads");
+    let download_dir = tf_src_dir.join("tensorflow/lite/tools/make/downloads");
     if !download_dir.exists() {
         fs_extra::dir::copy(
             submodules.join("downloads"),
@@ -65,15 +65,17 @@ fn build_with_cmake(tflite: &Path, tf_lib_name: &Path, arch: &str, os: &str) {
     let start = std::time::Instant::now();
     
     // Use the cmake crate for proper CMake integration
-    let mut cfg = cmake::Config::new(tflite);
+    let mut cfg = cmake::Config::new(&tflite);
     cfg.define("CMAKE_CXX_STANDARD", "17")
        .define("CMAKE_CXX_STANDARD_REQUIRED", "ON")
        .define("TFLITE_ENABLE_XNNPACK", "ON")
        .build_target("tensorflow-lite");
     
-    // Add include directories to find headers
-    cfg.cflag("-I.")
+    // Add include directories to find headers (add root to header search)
+    cfg.cflag(&format!("-I{}", tflite.display()))
+       .cflag("-I.")
        .cflag("-Itensorflow")
+       .cxxflag(&format!("-I{}", tflite.display()))
        .cxxflag("-I.")
        .cxxflag("-Itensorflow");
        
