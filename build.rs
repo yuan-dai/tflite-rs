@@ -98,6 +98,12 @@ project(tensorflow-lite)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Windows specific settings
+if(WIN32)
+    add_compile_definitions(NOMINMAX)    # Prevent min/max macro conflicts
+    add_compile_options(/EHsc)           # Enable exception handling
+endif()
+
 # Include directories - this is crucial for finding headers
 include_directories(.)
 include_directories(tensorflow)
@@ -123,6 +129,9 @@ list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/tools/.*")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/python/.*")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/java/.*")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/objc/.*")
+
+# Exclude benchmark files (require Google Benchmark library)
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*_benchmark\\.cc$")
 
 # Add Abseil dependency
 file(GLOB_RECURSE ABSL_SRCS "lite/tools/make/downloads/absl/absl/*.cc")
