@@ -35,6 +35,10 @@ fn prepare_tensorflow_source() -> PathBuf {
 
     let download_dir = tf_src_dir.join("lite/tools/make/downloads");
     if !download_dir.exists() {
+        // Ensure parent directories exist
+        std::fs::create_dir_all(download_dir.parent().unwrap())
+            .expect("Unable to create parent directories");
+            
         fs_extra::dir::copy(
             submodules.join("downloads"),
             download_dir.parent().unwrap(),
