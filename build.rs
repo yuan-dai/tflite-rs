@@ -104,7 +104,7 @@ include_directories(tensorflow)
 include_directories(lite/tools/make/downloads/flatbuffers/include)
 include_directories(lite/tools/make/downloads/absl)
 
-# Collect source files
+# Collect source files - only TensorFlow Lite core, exclude components requiring TF Core
 file(GLOB_RECURSE TFLITE_SRCS 
     "tensorflow/lite/*.cc"
     "tensorflow/lite/*.c"
@@ -115,6 +115,14 @@ list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*_test\\.cc$")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/test/.*")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/examples/.*")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/benchmark/.*")
+
+# Exclude TensorFlow Core dependent components
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/delegates/flex/.*")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/toco/.*")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/tools/.*")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/python/.*")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/java/.*")
+list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/objc/.*")
 
 # Add Abseil dependency
 file(GLOB_RECURSE ABSL_SRCS "lite/tools/make/downloads/absl/absl/*.cc")
