@@ -101,8 +101,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Include directories - this is crucial for finding headers
 include_directories(.)
 include_directories(tensorflow)
-include_directories(../downloads/flatbuffers/include)
-include_directories(../downloads/absl)
+include_directories(lite/tools/make/downloads/flatbuffers/include)
+include_directories(lite/tools/make/downloads/absl)
 
 # Collect source files
 file(GLOB_RECURSE TFLITE_SRCS 
@@ -117,7 +117,7 @@ list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/examples/.*")
 list(FILTER TFLITE_SRCS EXCLUDE REGEX ".*/benchmark/.*")
 
 # Add Abseil dependency
-file(GLOB_RECURSE ABSL_SRCS "../downloads/absl/absl/*.cc")
+file(GLOB_RECURSE ABSL_SRCS "lite/tools/make/downloads/absl/absl/*.cc")
 list(FILTER ABSL_SRCS EXCLUDE REGEX ".*_test\\.cc$")
 list(FILTER ABSL_SRCS EXCLUDE REGEX ".*/test/.*")
 
