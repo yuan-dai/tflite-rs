@@ -76,10 +76,11 @@ fn build_with_cmake(tflite: &Path, tf_lib_name: &Path, arch: &str, os: &str) {
        .build_target("tensorflow-lite");
     
     // Add include directories to find headers (add root to header search)
-    cfg.cflag(&format!("-I{}", tflite.display()))
+    // Quote paths to handle spaces on Windows
+    cfg.cflag(&format!("-I\"{}\"", tflite.display()))
        .cflag("-I.")
        .cflag("-Itensorflow")
-       .cxxflag(&format!("-I{}", tflite.display()))
+       .cxxflag(&format!("-I\"{}\"", tflite.display()))
        .cxxflag("-I.")
        .cxxflag("-Itensorflow");
        
